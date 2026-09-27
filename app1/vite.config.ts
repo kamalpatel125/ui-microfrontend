@@ -22,6 +22,11 @@ export default defineConfig({
       shared: {
         react: { singleton: true },
         'react-dom': { singleton: true },
+        // Singleton so App1's internal <Routes> (list -> detail) composes
+        // under Host's existing router when embedded, instead of bundling a
+        // second react-router-dom instance. Host already declares this same
+        // singleton in its own vite.config.ts.
+        'react-router-dom': { singleton: true },
       },
     }),
   ],

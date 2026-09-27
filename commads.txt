@@ -1,0 +1,1 @@
+pnpm --parallel --filter core --filter app1 --filter app2 --filter host run dev

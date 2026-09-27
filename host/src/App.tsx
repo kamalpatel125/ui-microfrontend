@@ -9,7 +9,7 @@ export default function App() {
     <AppShell>
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/app1" element={<App1Page />} />
+        <Route path="/app1/*" element={<App1Page />} />
         <Route path="/app2" element={<App2Page />} />
       </Routes>
     </AppShell>
