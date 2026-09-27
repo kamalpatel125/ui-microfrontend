@@ -1,0 +1,15 @@
+# Local-development convenience only — this is NOT the source of truth for
+# how these apps deploy. Each of shared/, core/, app1/, app2/, host/ is
+# still a fully independent project with its own package.json, scripts,
+# build output and (eventually) its own repo/CI pipeline. This root
+# workspace exists purely so contributors can `pnpm install` once instead
+# of five times, and so consumers link shared/core via `workspace:*`
+# instead of a manual `file:../shared` path. When any of these folders is
+# split into its own repo, it drops out of the workspace and its consumers
+# switch `workspace:*` to a real published version — no other code changes.
+packages:
+  - 'shared'
+  - 'core'
+  - 'app1'
+  - 'app2'
+  - 'host'
