@@ -1,7 +1,9 @@
 import { lazy, useCallback, useState } from 'react';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { Button, Card, formatCurrency, formatCompactNumber, useEventBusSubscription } from 'core';
 import { PORTFOLIO_UPDATED_TOPIC, type PortfolioUpdatedPayload } from 'shared';
 import { RemoteBoundary } from './components/RemoteBoundary';
+import AlertsPage from './pages/AlertsPage';
 
 // Pulled from App1 at runtime via Module Federation, not from Core — it's
 // App1's own domain component (risk-tier rules), shared sideways rather
@@ -30,7 +32,23 @@ const INITIAL_WATCHLIST: WatchedSymbol[] = [
 // App2 runs standalone on port 5003, or embedded inside Host via Module
 // Federation ("App2" expose — see bootstrap.tsx and federation.manifest.ts,
 // both of which ARE framework and should stay).
+//
+// App2's own top-level <Routes> — mirrors App1's PortfolioApp.tsx: every
+// path here is relative, so this composes correctly whether the router
+// ancestor is App2's own BrowserRouter (standalone, see main.tsx) or Host's
+// router reached through the "/app2/*" route (embedded, see
+// host/src/App.tsx) — App2 never needs to know or care which.
 export default function WatchlistApp() {
+  return (
+    <Routes>
+      <Route index element={<Navigate to="watchlist" replace />} />
+      <Route path="watchlist" element={<WatchlistOverview />} />
+      <Route path="alerts" element={<AlertsPage />} />
+    </Routes>
+  );
+}
+
+function WatchlistOverview() {
   const [watchlist, setWatchlist] = useState(INITIAL_WATCHLIST);
   const [portfolioNotice, setPortfolioNotice] = useState<string | null>(null);
 

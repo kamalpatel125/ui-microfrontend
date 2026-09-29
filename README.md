@@ -1,8 +1,8 @@
 # ui-microfrontend
 
-A production-shaped **Module Federation microfrontend starter kit** for React + Vite + TypeScript. Clone it, delete the example domain (a small "Portfolio"/"Watchlist" trading demo), and start building your own apps on top of scaffolding that already handles the parts that are easy to get wrong: independent team ownership, cross-app sharing without version lock-in, federation that actually works in `dev` mode, and documented tradeoffs for the cross-cutting problems (layout injection, app-to-app messaging) that every microfrontend project eventually hits.
+A production-shaped **Module Federation microfrontend starter kit** for React + Vite + TypeScript. Clone it, delete the example domain (a small "Portfolio"/"Watchlist" trading demo), and build your own apps on scaffolding that already handles the parts that are easy to get wrong: independent team ownership, cross-app sharing without version lock-in, federation that actually works in `dev` mode, and documented tradeoffs for cross-cutting problems (layout injection, app-to-app messaging) every microfrontend project eventually hits.
 
-**This is not a trading app.** App1 ("Portfolio") and App2 ("Watchlist") are example feature apps that exist only to demonstrate the patterns — every file that's pure example content is marked `EXAMPLE DOMAIN CONTENT` in a comment at the top, telling you what to keep (the pattern) and what to delete (the trading-specific logic). See [Using this as your own project](#using-this-as-your-own-project) below for the concrete steps.
+**This is not a trading app.** App1 ("Portfolio") and App2 ("Watchlist") exist only to demonstrate the patterns — every file that's pure example content is marked `EXAMPLE DOMAIN CONTENT` in a comment at the top, telling you what to keep (the pattern) and what to delete (the trading-specific logic). See [Using this as your own project](#using-this-as-your-own-project) for the concrete steps.
 
 ## What's in the box
 
@@ -56,9 +56,9 @@ The root `pnpm-workspace.yaml` + single `pnpm-lock.yaml` exist so a contributor 
 
 ## `dev` mode now works for federation (this changed with the plugin swap)
 
-With the old `@originjs/vite-plugin-federation`, remotes only worked when built + previewed — `vite dev` silently served the SPA fallback instead of a real `remoteEntry.js` (HTTP 200, wrong content, no error). **`@module-federation/vite` fixes this**: running `pnpm dev` in App1, App2, and Host simultaneously gives you full HMR *and* working live federation across all three — Host correctly loads App1/App2's dev-server-served remotes, and App2 correctly loads App1's `Settings` remote the same way. This was verified directly (fetching each dev server's `/remoteEntry.js` and confirming the consumer's transformed source resolves `import('app1/Settings')` to a real virtual module that fetches from App1's live dev server).
+With the old `@originjs/vite-plugin-federation`, remotes only worked when built + previewed — `vite dev` silently served the SPA fallback instead of a real `remoteEntry.js` (HTTP 200, wrong content, no error). **`@module-federation/vite` fixes this**: running `pnpm dev` in App1, App2, and Host simultaneously gives full HMR *and* working live federation across all three — Host correctly loads App1/App2's dev-server-served remotes, and App2 correctly loads App1's `Settings` remote the same way. Verified directly by fetching each dev server's `/remoteEntry.js` and confirming the consumer's transformed source resolves `import('app1/Settings')` to a real virtual module fetching from App1's live dev server.
 
-Practical effect: you can now just run all four with `pnpm dev` and see live changes everywhere via HMR, without the build+preview+refresh cycle the old plugin required. `preview` (of a real `pnpm build`) still matters for a realistic pre-deploy check, but it's no longer required for day-to-day cross-app development.
+Practical effect: no more build+preview+refresh cycle for day-to-day cross-app development — see [Run all apps together](#run-all-apps-together-live-with-hmr-recommended) below. `preview` (of a real `pnpm build`) still matters as a realistic pre-deploy check, just not for daily iteration.
 
 ## Sharing patterns: Core vs. cross-app federation
 
@@ -98,23 +98,22 @@ Adding a new cross-app share means: add one entry to the exposing app's `federat
 
 ## Layout ownership: Host, not Core, and not any one feature app
 
-Header, sidebar, footer — the portal's page chrome — belongs to **Host**, not Core and not App1/App2. The reasoning:
+Header, sidebar, footer — the portal's page chrome — belongs to **Host**, not Core and not App1/App2:
 
 - It isn't a reusable UI primitive like `Button` (Core's job) — it's a structural decision about the page as a whole, and only the portal can see the whole page.
 - It isn't any one feature app's job either — if App1 owned the header, App2 (and any future App3) would have no say in it. Only the thing that composes all the apps together can neutrally own the shell they all sit inside.
 
-Core could still supply the *visual* building blocks a header/sidebar are built from (a styled `<HeaderBar>` primitive, spacing tokens, etc.) if that need ever arises — that's a Core-shaped concern (generic, no domain knowledge). The *decision* of what the shell looks like and which regions exist is Host's.
+Core could still supply the *visual* building blocks a header/sidebar are built from (a styled `<HeaderBar>` primitive, spacing tokens) if that need arises — that's Core-shaped (generic, no domain knowledge). The *decision* of what the shell looks like and which regions exist is Host's.
 
-`host/src/layout/` holds this: `AppShell.tsx` (composes `Header` + `Sidebar` + routed content + `Footer`), plus the three chrome components themselves. Feature pages (App1, App2) render only inside the content area — they do not currently have a way to place content into the shared header/sidebar/footer.
+`host/src/layout/` holds this: `AppShell.tsx` composes `Header` + `Sidebar` + routed content + `Footer`.
 
-### Cross-boundary layout injection: tried, rolled back — not solved yet
+### Cross-boundary layout injection: how a feature app puts content into Host's chrome
 
-A feature app sometimes legitimately wants to put something into the shared chrome (e.g. an "Export" button in the header, next to a specific page). This was prototyped twice and rolled back both times — worth recording why, so the same dead ends aren't re-walked:
+A feature app sometimes legitimately wants to contribute something to the shared chrome — Sidebar's second-level nav being the example built out in this repo. Two shapes were tried and rejected before landing on the one below: a Host-owned slot registry consumed by App1 (creates a new App1→Host federation edge, inverting the normal stability direction — shells should be stable, features volatile), and a shared `React.Context` in Core (doesn't work — Core isn't in any app's federation `shared` config, so each app bundles its own separate copy, and `createContext()` produces unrelated objects per bundle).
 
-1. **Host exposes a slot registry via Module Federation, App1 consumes it.** Works, but creates an App1→Host federation edge on top of Host's existing Host→App1 edge — a leaf feature app depending on the root shell inverts the normal stability direction (shells should be stable; features should be the volatile side), and every additional slot-consuming app adds another such edge.
-2. **Move the registry into Core as a shared `React.Context`, so both sides import it as a normal dependency instead of a remote.** This doesn't actually work: Core is deliberately *not* in any app's federation `shared` config (that's what makes it a versioned, independently-upgradable dependency rather than a runtime singleton), so Host and App1 each bundle their **own separate copy** of Core's compiled JS. `createContext()` therefore runs twice — once per bundle — producing two unrelated Context objects that can never see each other's `Provider`/`useContext` calls. A `window`-global singleton would sidestep that, but was set aside for now rather than committing to a pattern not yet proven out.
+**What works:** each app exposes a `./Sidebar` component via Module Federation — `app1/src/Sidebar.tsx`, `app2/src/Sidebar.tsx` — the same way App1 already exposes `./App1` (its main page) and `./Settings` (a sideways share to App2). No new federation edge: it's the same Host→App1/App2 edge already used to mount each app's main page, just one more exposed path on it. Host never sees or interprets app-shaped data — `host/src/layout/useActiveRemoteSidebar.ts` matches the current URL against each remote's `routePrefix` (`host/federation.remotes.ts`) to decide *whether* to mount a component, and `host/src/layout/Sidebar.tsx` wraps whatever comes back in the same `RemoteBoundary` pattern used for the main page mounts — it contains zero app-specific code. Each app owns its own links, styling, and any future logic (active-item highlighting, badges) outright. Adding a new remote's sidebar is a `federation.remotes.ts` entry + one line in the hook's component map — never a `Sidebar.tsx` edit.
 
-Current state: Host owns the layout, full stop. If/when cross-boundary injection is needed for real, revisit with the tradeoffs above in mind — the two live options are (a) Host passing a callback prop down when it renders a remote (no federation edge, but the remote's component signature must know it might receive one), or (b) a global-singleton-backed registry in Core, accepting a `window` global as the deliberate escape hatch for a problem plain Context can't solve across independently-bundled apps.
+This same shape (expose a component, have Host mount it conditionally via `RemoteBoundary`) generalizes to header/footer injection if that's ever needed.
 
 ## App-to-app messaging: the cross-app event bus
 
@@ -167,35 +166,48 @@ App1/App2/Host's remote URLs are **not hardcoded** anywhere — each `.env` supp
 
 ## Getting started
 
-One install for the whole workspace:
+### Install (once, for the whole workspace)
 
 ```bash
 pnpm install
 ```
 
-This links `shared` and `core` into `app1`/`app2` automatically via the workspace — no separate step needed, unlike the old `file:../core` setup.
+This links `shared` and `core` into `app1`/`app2` automatically via the workspace — no separate `file:../core`-style step needed.
 
-**`shared` and Core must still be built once before App1/App2 can use their compiled output** — `pnpm install` only links the packages, it doesn't build them:
+`shared` and Core must still be **built once** before App1/App2 can use their compiled output — `pnpm install` only links the packages, it doesn't build them:
 
 ```bash
 cd shared && pnpm build
 cd ../core && pnpm build
 ```
 
-### Run everything together, live, with HMR (recommended now)
+### Run all apps together, live, with HMR (recommended)
+
+One command, from the repo root, starts Core, App1, App2, and Host in parallel:
+
+```bash
+pnpm --parallel --filter core --filter app1 --filter app2 --filter host run dev
+```
+
+Then open **http://localhost:5000** and navigate to Portfolio / Watchlist. Both remotes, and App2's cross-app `Settings` consumption from App1, work live with HMR — `@module-federation/vite` serves real federation from each dev server, not just from a built `preview`. This single command is saved in [`commads.txt`](./commads.txt) for quick reference.
+
+Ports: Host `5000`, Core `5001`, App1 `5002`, App2 `5003`.
+
+Equivalent, run as separate terminals (useful if you want each app's logs in its own window):
 
 ```bash
 # Terminal 1
-cd app1 && pnpm dev      # http://localhost:5002
+cd core && pnpm dev      # http://localhost:5001
 
 # Terminal 2
-cd app2 && pnpm dev      # http://localhost:5003
+cd app1 && pnpm dev      # http://localhost:5002
 
 # Terminal 3
+cd app2 && pnpm dev      # http://localhost:5003
+
+# Terminal 4
 cd host && pnpm dev      # http://localhost:5000
 ```
-
-Open **http://localhost:5000** and navigate to Portfolio / Watchlist — both remotes, and App2's cross-app `Settings` consumption from App1, work live with HMR now that the plugin swap fixed dev-mode federation.
 
 ### Build + preview (closer to a real deploy)
 

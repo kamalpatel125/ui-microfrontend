@@ -38,6 +38,21 @@ export const exposes: FederationExpose[] = [
       "encodes App1's own domain rules (risk tiers, rebalancing thresholds) rather " +
       'than being a generic, reusable UI primitive.',
   },
+  {
+    path: './Sidebar',
+    entry: './src/Sidebar.tsx',
+    consumedBy: ['host'],
+    note: 'Component App1 renders into Host\'s sidebar region when the ' +
+      'active route falls under App1 — App1 owns its own <Link>s and markup ' +
+      'outright, the same way it owns "./App1" and "./Settings". Host just ' +
+      'mounts whatever this exposes (wrapped in its own RemoteBoundary); it ' +
+      'never interprets App1-shaped data or reaches into App1\'s DOM. This ' +
+      'is not the "slot registry" the README\'s "Cross-boundary layout ' +
+      'injection" section rejected — that pattern had App1 (leaf) *consume* ' +
+      'a Host-owned remote, inverting the stability direction. Here App1 ' +
+      'stays the one being consumed, on the same Host→App1 federation edge ' +
+      'that already exists for "./App1" — just one more exposed path on it.',
+  },
 ];
 
 /** Reduces the manifest above to the shape vite-plugin-federation expects. */

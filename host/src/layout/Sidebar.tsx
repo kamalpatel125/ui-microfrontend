@@ -1,5 +1,14 @@
-// A left-hand sidebar owned by Host.
+import { RemoteBoundary } from '../components/RemoteBoundary';
+import { useActiveRemoteSidebar } from './useActiveRemoteSidebar';
+
+// A left-hand sidebar owned by Host, but its content is entirely the active
+// remote's own — Host just mounts whichever remote's exposed Sidebar
+// component matches the current route (see useActiveRemoteSidebar) inside a
+// RemoteBoundary, same pattern as App1Page/App2Page mounting the remotes'
+// main pages. Host never touches app-specific markup here.
 export function Sidebar() {
+  const active = useActiveRemoteSidebar();
+
   return (
     <aside
       style={{
@@ -8,12 +17,11 @@ export function Sidebar() {
         padding: 16,
       }}
     >
-      <div style={{ fontSize: 13, fontWeight: 700, color: '#6b7280', marginBottom: 8 }}>MARKETS</div>
-      <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: 14, color: '#374151' }}>
-        <li style={{ marginBottom: 6 }}>Equities</li>
-        <li style={{ marginBottom: 6 }}>Options</li>
-        <li style={{ marginBottom: 6 }}>Futures</li>
-      </ul>
+      {active && (
+        <RemoteBoundary key={active.name} name={`${active.name} sidebar`}>
+          <active.Component />
+        </RemoteBoundary>
+      )}
     </aside>
   );
 }

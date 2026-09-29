@@ -3,6 +3,9 @@ import PositionList from './PositionList';
 import PositionDetail from './PositionDetail';
 import PositionOverview from './PositionOverview';
 import PositionHistory from './PositionHistory';
+import HoldingsPage from './pages/HoldingsPage';
+import PerformancePage from './pages/PerformancePage';
+import RebalancingPage from './pages/RebalancingPage';
 
 // App1 runs standalone on port 5002, or embedded inside Host via Module
 // Federation ("App1" expose — see bootstrap.tsx and federation.manifest.ts,
@@ -23,6 +26,9 @@ export default function PortfolioApp() {
   return (
     <Routes>
       <Route index element={<PositionList />} />
+      <Route path="holdings" element={<HoldingsPage />} />
+      <Route path="performance" element={<PerformancePage />} />
+      <Route path="rebalancing" element={<RebalancingPage />} />
       <Route path=":symbol" element={<PositionDetail />}>
         <Route index element={<Navigate to="overview" replace />} />
         <Route path="overview" element={<PositionOverview />} />

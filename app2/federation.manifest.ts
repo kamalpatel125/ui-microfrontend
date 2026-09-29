@@ -16,6 +16,14 @@ export const exposes: FederationExpose[] = [
     consumedBy: ['host'],
     note: 'The whole Watchlist feature, mounted as a page inside the Host portal.',
   },
+  {
+    path: './Sidebar',
+    entry: './src/Sidebar.tsx',
+    consumedBy: ['host'],
+    note: 'Component App2 renders into Host\'s sidebar region when the ' +
+      'active route falls under App2 — see app1/federation.manifest.ts for ' +
+      'the full rationale.',
+  },
 ];
 
 export function toFederationExposesRecord(): Record<string, string> {

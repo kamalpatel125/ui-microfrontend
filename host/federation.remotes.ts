@@ -7,6 +7,14 @@ export interface RemoteSource {
   envVar: string;
   localDefault: string;
   consumes: string[];
+  /**
+   * URL prefix that marks this remote as "active" for Host's Sidebar (see
+   * src/layout/Sidebar.tsx + src/layout/useActiveRemoteSidebar.ts), which
+   * mounts that remote's own exposed `./Sidebar` component when the current
+   * route starts with this prefix. Optional — a remote with no sidebar
+   * content (or not yet wired for it) omits this.
+   */
+  routePrefix?: string;
 }
 
 export const remoteSources: RemoteSource[] = [
@@ -15,12 +23,14 @@ export const remoteSources: RemoteSource[] = [
     envVar: 'VITE_APP1_REMOTE_URL',
     localDefault: 'http://localhost:5002/remoteEntry.js',
     consumes: ['./App1 — the Portfolio feature page'],
+    routePrefix: '/app1',
   },
   {
     name: 'app2',
     envVar: 'VITE_APP2_REMOTE_URL',
     localDefault: 'http://localhost:5003/remoteEntry.js',
     consumes: ['./App2 — the Watchlist feature page'],
+    routePrefix: '/app2',
   },
 ];
 

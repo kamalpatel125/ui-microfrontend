@@ -21,7 +21,7 @@ export function Header() {
         alignItems: 'center',
       }}
     >
-      <strong style={{ marginRight: 16 }}>ui-microfrontend</strong>
+      <strong style={{ marginRight: 16 }}>Host Portal</strong>
       <nav style={{ display: 'flex' }}>
         <NavLink to="/" style={navLinkStyle} end>
           Home
