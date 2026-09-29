@@ -4,6 +4,58 @@ A production-shaped **Module Federation microfrontend starter kit** for React + 
 
 **This is not a trading app.** App1 ("Portfolio") and App2 ("Watchlist") exist only to demonstrate the patterns — every file that's pure example content is marked `EXAMPLE DOMAIN CONTENT` in a comment at the top, telling you what to keep (the pattern) and what to delete (the trading-specific logic). See [Using this as your own project](#using-this-as-your-own-project) for the concrete steps.
 
+## Architecture at a glance
+
+```mermaid
+flowchart TB
+    subgraph Runtime["Browser — runtime (Module Federation)"]
+        Host["<b>Host</b><br/>portal shell · :5000<br/>owns routing + layout<br/>(Header, Sidebar, Footer)"]
+        App1["<b>App1</b> — Portfolio<br/>feature remote · :5002"]
+        App2["<b>App2</b> — Watchlist<br/>feature remote · :5003"]
+
+        Host -- "mounts ./App1<br/>+ ./Sidebar" --> App1
+        Host -- "mounts ./App2<br/>+ ./Sidebar" --> App2
+        App2 -- "consumes ./Settings<br/>(sideways share)" --> App1
+    end
+
+    subgraph BuildTime["Build time (pnpm workspace, bundled in)"]
+        Core["<b>core</b><br/>Button, Card, formatters,<br/>cross-app event bus"]
+        Shared["<b>shared</b><br/>types + event-topic<br/>constants only"]
+    end
+
+    App1 -.->|"workspace:*"| Core
+    App2 -.->|"workspace:*"| Core
+    App1 -.->|"workspace:*"| Shared
+    App2 -.->|"workspace:*"| Shared
+
+    App1 <-.->|"BroadcastChannel<br/>(via core's event bus)"| App2
+
+    style Host fill:#2563eb,color:#fff,stroke:#1e40af
+    style App1 fill:#059669,color:#fff,stroke:#047857
+    style App2 fill:#059669,color:#fff,stroke:#047857
+    style Core fill:#6b7280,color:#fff,stroke:#4b5563
+    style Shared fill:#6b7280,color:#fff,stroke:#4b5563
+```
+
+Solid arrows are **Module Federation** (runtime, loaded over HTTP as `remoteEntry.js` — no rebuild needed to pick up a new deploy). Dashed arrows are **pnpm workspace** dependencies (compiled directly into the consumer's bundle at build time). The dotted double arrow is the **cross-app event bus** (`BroadcastChannel`, not federation or a shared import — see [App-to-app messaging](#app-to-app-messaging-the-cross-app-event-bus)).
+
+Notice Host never touches Core or `shared` — it renders no Core components and needs no cross-app event contracts, so depending on either would be pure dead weight. See [Three integration mechanisms, chosen deliberately](#three-integration-mechanisms-chosen-deliberately) for why each arrow type was chosen over the alternatives.
+
+## What this demonstrates
+
+| Capability | Where |
+|---|---|
+| Federation that actually works in `dev` mode — live HMR across Host + remotes, not just after a build | [`dev` mode now works for federation](#dev-mode-now-works-for-federation-this-changed-with-the-plugin-swap) |
+| Each remote runs fully standalone, with no dependency on Host or any other remote being up | [Getting started](#getting-started) |
+| Cross-app type safety — a remote's real TypeScript types, auto-generated, no hand-written `declare module` | [Cross-app types are auto-generated](#cross-app-types-are-auto-generated--no-manual-declare-module-needed) |
+| Sideways sharing between two feature apps, bypassing the portal shell (App1 → App2) | [Sharing patterns](#sharing-patterns-core-vs-cross-app-federation) |
+| A feature app contributing UI into the shell's layout (Host's Sidebar) without a reverse federation edge | [Cross-boundary layout injection](#cross-boundary-layout-injection-how-a-feature-app-puts-content-into-hosts-chrome) |
+| App-to-app messaging that works regardless of which apps are mounted, or even across browser tabs | [App-to-app messaging](#app-to-app-messaging-the-cross-app-event-bus) |
+| A deliberate boundary between a runtime component library (Core) and a types-only contract package (`shared`) | [Core vs. `shared`](#core-vs-shared-the-actual-distinction) |
+| Graceful degradation — the portal keeps working if a remote is down or not yet deployed | [How the pieces fit together](#how-the-pieces-fit-together) |
+| Env-driven remote URLs — point at staging/prod deployments with no code changes | [How the pieces fit together](#how-the-pieces-fit-together) |
+| A path to splitting into separate repos with independent CI/CD, with no architectural rework | [Splitting into separate repos](#splitting-into-separate-repos) |
+
 ## What's in the box
 
 ```
