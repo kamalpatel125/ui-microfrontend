@@ -1,5 +1,5 @@
 import { useOutletContext } from 'react-router-dom';
-import type { Position } from './domain/positions';
+import type { Position } from 'shared';
 
 // EXAMPLE DOMAIN CONTENT — the "history" tab content for /app1/:symbol,
 // rendered into PositionDetail's <Outlet>. Exists to demonstrate a third

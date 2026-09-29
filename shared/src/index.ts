@@ -27,3 +27,4 @@
 
 export { PORTFOLIO_UPDATED_TOPIC } from './events/portfolio';
 export type { PortfolioUpdatedPayload } from './events/portfolio';
+export type { Position } from './domain/position';

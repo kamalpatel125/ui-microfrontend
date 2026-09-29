@@ -1,6 +1,6 @@
 import { useOutletContext } from 'react-router-dom';
 import { formatCurrency, formatPercent } from 'core';
-import type { Position } from './domain/positions';
+import type { Position } from 'shared';
 
 // EXAMPLE DOMAIN CONTENT — the "overview" tab content for /app1/:symbol,
 // rendered into PositionDetail's <Outlet>.

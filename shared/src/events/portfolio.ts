@@ -6,9 +6,11 @@
  * shared" section. The bus mechanism itself (publish/subscribe) lives in
  * Core's eventBus/EventBus.ts and stays as-is.
  */
+import type { Position } from '../domain/position';
+
 export const PORTFOLIO_UPDATED_TOPIC = 'portfolio:updated';
 
 export interface PortfolioUpdatedPayload {
-  positions: { symbol: string; price: number; changePercent: number }[];
+  positions: Position[];
   updatedAt: string;
 }
